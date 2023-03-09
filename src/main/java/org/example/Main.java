@@ -13,10 +13,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Main extends TelegramLongPollingBot {
     private Map<Long, Integer> levels = new HashMap<>();
@@ -162,5 +159,10 @@ public class Main extends TelegramLongPollingBot {
     }
     public void setLevel(Long chatId, int level) {
         levels.put(chatId, level);
+    }
+    public List<String> getRandomThree(List<String> variants){
+        ArrayList<String> copy = new ArrayList<>(variants);
+        Collections.shuffle(copy);
+        return copy.subList(0,3);
     }
 }
