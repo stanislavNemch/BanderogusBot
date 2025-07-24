@@ -41,13 +41,6 @@ public class Main extends TelegramLongPollingBot {
         Main bot = new Main();
         api.registerBot(bot);
         logger.info("Telegram Bot is running!");
-
-        // Реєструємо "пастку вимкнення" для збереження даних
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.info("Shutting down. Saving user levels...");
-            GameData.saveUserLevels(bot.userLevels);
-            logger.info("User levels saved. Goodbye!");
-        }));
     }
 
     @Override
@@ -233,6 +226,8 @@ public class Main extends TelegramLongPollingBot {
 
     public void setLevel(Long chatId, int level) {
         userLevels.put(chatId, level);
+        GameData.saveUserLevels(this.userLevels);
+        logger.info("Set level {} for chat {}. Data saved.", level, chatId);
     }
 
     public List<String> getRandomThree(List<String> variants) {
