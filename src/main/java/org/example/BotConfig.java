@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 public class BotConfig {
-    // Используем логгер и здесь
+    // Використовуємо логер і тут
     private static final Logger logger = LoggerFactory.getLogger(BotConfig.class);
     private static final Properties properties = new Properties();
     private static final String CONFIG_FILE_PATH = "config.properties";
@@ -21,16 +21,16 @@ public class BotConfig {
              InputStreamReader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
             properties.load(reader);
         } catch (IOException ex) {
-            // Используем логгер вместо System.err
+            // Використовуємо логер замість System.err
             logger.error("Configuration file '{}' not found or cannot be read.", CONFIG_FILE_PATH, ex);
-            // Завершаем программу, так как без конфигурации бот работать не может
+            // Завершуємо програму, тому що без конфігурації бот працювати не може
             System.exit(1);
         }
     }
 
     public static String getBotUsername() {
         String username = properties.getProperty("bot.username");
-        // Проверяем, что свойство не только существует, но и не пустое
+        // Перевіряємо, що властивість не тільки існує, а й не пуста
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalStateException("Property 'bot.username' is missing or empty in " + CONFIG_FILE_PATH);
         }

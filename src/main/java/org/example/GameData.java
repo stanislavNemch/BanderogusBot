@@ -18,8 +18,8 @@ public class GameData {
     private static final Gson gson = new Gson();
 
     /**
-     * Загружает уровни пользователей из файла.
-     * Если файл не существует, возвращает пустую карту.
+     * Завантажує рівні користувачів із файлу.
+     * Якщо файл не існує, повертає порожню картку.
      */
     public static Map<Long, Integer> loadUserLevels() {
         // Используем File для проверки существования, чтобы не полагаться только на исключения
@@ -27,7 +27,7 @@ public class GameData {
             Type type = new TypeToken<HashMap<Long, Integer>>(){}.getType();
             Map<Long, Integer> levels = gson.fromJson(reader, type);
 
-            // Проверяем, не вернул ли Gson null (это происходит, если файл пустой)
+            // Перевіряємо, чи не повернув Gson null (це відбувається, якщо файл порожній)
             if (levels == null) {
                 logger.warn("File '{}' is empty. Starting with a new set of user levels.", FILE_PATH);
                 return new HashMap<>();
@@ -36,14 +36,14 @@ public class GameData {
             logger.info("Successfully loaded {} user levels from {}", levels.size(), FILE_PATH);
             return levels;
         } catch (IOException e) {
-            // Этот блок сработает, если файл не найден
+            // Цей блок спрацює, якщо файл не знайдено
             logger.warn("Could not find or read '{}'. Starting with empty user levels.", FILE_PATH);
             return new HashMap<>();
         }
     }
 
     /**
-     * Сохраняет уровни пользователей в файл.
+     * Зберігає рівні користувачів у файлі.
      */
     public static void saveUserLevels(Map<Long, Integer> levels) {
         try (FileWriter writer = new FileWriter(FILE_PATH)) {

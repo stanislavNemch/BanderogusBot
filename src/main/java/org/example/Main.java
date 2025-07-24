@@ -1,13 +1,12 @@
 package org.example;
 
-// Импортируем классы для логирования
+// Імпортуємо класи для логування
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -24,13 +23,13 @@ public class Main extends TelegramLongPollingBot {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    // Константы для callback-данных
+    // Константи для callback-даних
     private static final String LEVEL_1_TASK = "level_1_task";
     private static final String LEVEL_2_TASK = "level_2_task";
     private static final String LEVEL_3_TASK = "level_3_task";
     private static final String LEVEL_4_TASK = "level_4_task";
 
-    // Хранилище уровней пользователей, загружается из файла
+    // Сховище рівнів користувачів завантажується з файлу
     private final Map<Long, Integer> userLevels = GameData.loadUserLevels();
 
     public Main() {
@@ -43,7 +42,7 @@ public class Main extends TelegramLongPollingBot {
         api.registerBot(bot);
         logger.info("Telegram Bot is running!");
 
-        // Регистрируем "ловушку выключения" для сохранения данных
+        // Реєструємо "пастку вимкнення" для збереження даних
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             logger.info("Shutting down. Saving user levels...");
             GameData.saveUserLevels(bot.userLevels);
@@ -125,7 +124,7 @@ public class Main extends TelegramLongPollingBot {
                 buttonTexts.get(2), LEVEL_1_TASK
         );
 
-        // Отправляем анимацию, текст и кнопки одним запросом
+        // Відправляємо анімацію, текст та кнопки одним запитом
         sendAnimation("level-1", chatId, text, createMarkup(buttons));
     }
 
@@ -159,12 +158,12 @@ public class Main extends TelegramLongPollingBot {
     private void handleFinalTask(Long chatId) throws TelegramApiException {
         setLevel(chatId, 5);
         String text = "*Джавелін твій. Повний вперед!*";
-        // Отправляем финальную анимацию с подписью, без кнопок
+        // Надсилаємо фінальну анімацію з підписом, без кнопок
         sendAnimation("final", chatId, text, null);
     }
 
     /**
-     * Создает Map для кнопок уровня, выбирая 3 случайных задания.
+     * Створює Map для кнопок рівня, вибираючи 3 випадкові завдання.
      */
     private Map<String, String> createLevelButtons(List<String> tasks, String callbackData) {
         List<String> randomTasks = getRandomThree(tasks);
@@ -176,11 +175,11 @@ public class Main extends TelegramLongPollingBot {
     }
 
     /**
-     * Отправляет анимацию с возможностью добавить подпись и кнопки.
-     * @param name Имя файла анимации (без .gif)
-     * @param chatId ID чата
-     * @param caption Текст подписи под анимацией (поддерживает Markdown)
-     * @param markup Клавиатура с кнопками
+     * Відправляє анімацію з можливістю додати підпис та кнопки.
+     * @param name Ім'я файлу анімації (без .gif)
+     * @param chatId ID чату
+     * @param caption Текст підпису під анімацією (підтримує Markdown)
+     * @param markup Клавіатура з кнопками
      */
     public void sendAnimation(String name, Long chatId, String caption, InlineKeyboardMarkup markup) throws TelegramApiException {
         SendAnimation animation = new SendAnimation();
@@ -209,7 +208,7 @@ public class Main extends TelegramLongPollingBot {
     }
 
     /**
-     * Создает объект клавиатуры (разметки) из карты кнопок.
+     * Створює об'єкт клавіатури (розмітки) із картки кнопок.
      */
     private InlineKeyboardMarkup createMarkup(Map<String, String> buttons) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
