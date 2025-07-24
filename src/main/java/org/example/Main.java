@@ -1,5 +1,9 @@
 package org.example;
 
+// Импортируем классы для логирования
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
@@ -18,26 +22,28 @@ import static java.util.Arrays.asList;
 
 public class Main extends TelegramLongPollingBot {
 
-    // Константы для callback-данных
+    // Создаем экземпляр логгера для нашего класса. Это стандартная практика.
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
+    // Константы для callback-данных улучшают читаемость и упрощают изменения.
     private static final String LEVEL_1_TASK = "level_1_task";
     private static final String LEVEL_2_TASK = "level_2_task";
     private static final String LEVEL_3_TASK = "level_3_task";
     private static final String LEVEL_4_TASK = "level_4_task";
 
-    // Хранилище уровней пользователей
+    // Хранилище уровней пользователей. При перезапуске бота данные теряются.
     private final Map<Long, Integer> userLevels = new HashMap<>();
 
-    // ================== КОНСТРУКТОР ==================
-    // Передаем токен в конструктор родительского класса.
+    // Передаем токен в конструктор родительского класса. Это новый, рекомендуемый способ.
     public Main() {
         super(BotConfig.getBotToken());
     }
-    // ==============================================================
 
     public static void main(String[] args) throws TelegramApiException {
         TelegramBotsApi api = new TelegramBotsApi(DefaultBotSession.class);
         api.registerBot(new Main());
-        System.out.println("Telegram Bot is running!");
+        // Используем логгер для информационных сообщений.
+        logger.info("Telegram Bot is running!");
     }
 
     @Override
@@ -45,6 +51,11 @@ public class Main extends TelegramLongPollingBot {
         return BotConfig.getBotUsername();
     }
 
+    /**
+     * Главный метод для обработки входящих обновлений.
+     * Реализована отказоустойчивая обработка ошибок: ошибка при обработке
+     * одного сообщения не остановит работу всего бота.
+     */
     @Override
     public void onUpdateReceived(Update update) {
         Long chatId = getChatId(update);
@@ -52,18 +63,16 @@ public class Main extends TelegramLongPollingBot {
             return;
         }
 
-        if (update.hasMessage() && "/start".equals(update.getMessage().getText())) {
-            try {
+        try {
+            if (update.hasMessage() && "/start".equals(update.getMessage().getText())) {
                 handleStartCommand(chatId);
-            } catch (TelegramApiException e) {
-                throw new RuntimeException(e);
-            }
-        } else if (update.hasCallbackQuery()) {
-            try {
+            } else if (update.hasCallbackQuery()) {
                 handleCallback(update.getCallbackQuery().getData(), chatId);
-            } catch (TelegramApiException e) {
-                throw new RuntimeException(e);
             }
+        } catch (TelegramApiException e) {
+            // Ловим ошибку на самом верхнем уровне.
+            // Вместо того чтобы "ронять" бота, мы просто записываем информацию в лог.
+            logger.error("API error processing update for chat {}: {}", chatId, e.getMessage(), e);
         }
     }
 
@@ -84,7 +93,7 @@ public class Main extends TelegramLongPollingBot {
                 if (userLevel == 4) handleFinalTask(chatId);
                 break;
             default:
-                System.out.println("Unknown callback: " + callbackData);
+                logger.warn("Unknown callback received: {}", callbackData);
                 break;
         }
     }
@@ -120,9 +129,7 @@ public class Main extends TelegramLongPollingBot {
                 buttons.get(1), LEVEL_1_TASK,
                 buttons.get(2), LEVEL_1_TASK
         ));
-        // ================== ASYNC МЕТОД ==================
         executeAsync(message);
-        // =============================================================
     }
 
     private void handleLevelUp(Long chatId, int newLevel) throws TelegramApiException {
@@ -152,6 +159,7 @@ public class Main extends TelegramLongPollingBot {
                 executeAsync(message);
                 return;
             default:
+                logger.warn("Attempted to level up to an unknown level: {}", newLevel);
                 return;
         }
 
@@ -161,9 +169,7 @@ public class Main extends TelegramLongPollingBot {
                 randomButtons.get(1), callback,
                 randomButtons.get(2), callback
         ));
-        // ================== ASYNC МЕТОД ==================
         executeAsync(message);
-        // =============================================================
     }
 
     private void handleFinalTask(Long chatId) throws TelegramApiException {
@@ -171,9 +177,7 @@ public class Main extends TelegramLongPollingBot {
         sendImage("final", chatId);
         SendMessage message = createMessage("*Джавелін твій. Повний вперед!*");
         message.setChatId(chatId);
-        // ================== ASYNC МЕТОД ==================
         executeAsync(message);
-        // =============================================================
     }
 
     public Long getChatId(Update update) {
@@ -218,7 +222,8 @@ public class Main extends TelegramLongPollingBot {
             animation.setChatId(chatId);
             execute(animation);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            // Используем логгер для записи ошибок
+            logger.error("Failed to send image '{}' to chat {}: {}", name, chatId, e.getMessage(), e);
         }
     }
 
