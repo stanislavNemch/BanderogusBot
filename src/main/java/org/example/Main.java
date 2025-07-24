@@ -27,9 +27,8 @@ public class Main extends TelegramLongPollingBot {
     // Хранилище уровней пользователей
     private final Map<Long, Integer> userLevels = new HashMap<>();
 
-    // ================== ИЗМЕНЕНИЕ №1: КОНСТРУКТОР ==================
+    // ================== КОНСТРУКТОР ==================
     // Передаем токен в конструктор родительского класса.
-    // Это новый, рекомендуемый способ.
     public Main() {
         super(BotConfig.getBotToken());
     }
