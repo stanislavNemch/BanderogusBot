@@ -24,12 +24,14 @@ This is a simple Telegram bot game where you level up your "battle goose" by com
 
 3. **Build the project:**
    ```bash
-   ./gradlew build
+   .\gradlew.bat build (for Windows)
+   ./gradlew build (for Linux/macOS)
    ```
 
 4. **Run the bot:**
    ```bash
-   ./gradlew run
+   .\gradlew.bat run (for Windows)
+   ./gradlew run (for Linux/macOS)
    ```
    Or run the `main` method in the `org.example.Main` class from your IDE.
 
