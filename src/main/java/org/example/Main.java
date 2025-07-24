@@ -22,28 +22,33 @@ import static java.util.Arrays.asList;
 
 public class Main extends TelegramLongPollingBot {
 
-    // Создаем экземпляр логгера для нашего класса. Это стандартная практика.
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    // Константы для callback-данных улучшают читаемость и упрощают изменения.
+    // Константы для callback-данных
     private static final String LEVEL_1_TASK = "level_1_task";
     private static final String LEVEL_2_TASK = "level_2_task";
     private static final String LEVEL_3_TASK = "level_3_task";
     private static final String LEVEL_4_TASK = "level_4_task";
 
-    // Хранилище уровней пользователей. При перезапуске бота данные теряются.
-    private final Map<Long, Integer> userLevels = new HashMap<>();
+    // Хранилище уровней пользователей, загружается из файла
+    private final Map<Long, Integer> userLevels = GameData.loadUserLevels();
 
-    // Передаем токен в конструктор родительского класса. Это новый, рекомендуемый способ.
     public Main() {
         super(BotConfig.getBotToken());
     }
 
     public static void main(String[] args) throws TelegramApiException {
         TelegramBotsApi api = new TelegramBotsApi(DefaultBotSession.class);
-        api.registerBot(new Main());
-        // Используем логгер для информационных сообщений.
+        Main bot = new Main();
+        api.registerBot(bot);
         logger.info("Telegram Bot is running!");
+
+        // Регистрируем "ловушку выключения" для сохранения данных
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.info("Shutting down. Saving user levels...");
+            GameData.saveUserLevels(bot.userLevels);
+            logger.info("User levels saved. Goodbye!");
+        }));
     }
 
     @Override
@@ -51,11 +56,6 @@ public class Main extends TelegramLongPollingBot {
         return BotConfig.getBotUsername();
     }
 
-    /**
-     * Главный метод для обработки входящих обновлений.
-     * Реализована отказоустойчивая обработка ошибок: ошибка при обработке
-     * одного сообщения не остановит работу всего бота.
-     */
     @Override
     public void onUpdateReceived(Update update) {
         Long chatId = getChatId(update);
@@ -70,8 +70,6 @@ public class Main extends TelegramLongPollingBot {
                 handleCallback(update.getCallbackQuery().getData(), chatId);
             }
         } catch (TelegramApiException e) {
-            // Ловим ошибку на самом верхнем уровне.
-            // Вместо того чтобы "ронять" бота, мы просто записываем информацию в лог.
             logger.error("API error processing update for chat {}: {}", chatId, e.getMessage(), e);
         }
     }
@@ -100,7 +98,6 @@ public class Main extends TelegramLongPollingBot {
 
     private void handleStartCommand(Long chatId) throws TelegramApiException {
         setLevel(chatId, 1);
-        sendImage("level-1", chatId);
 
         String text = "Ґа-ґа-ґа!\n" +
                 "Вітаємо у боті біолабораторії «Батько наш Бандера».\n\n" +
@@ -113,10 +110,8 @@ public class Main extends TelegramLongPollingBot {
                 "*Гусак звичайний.* Стартовий рівень.\n" +
                 "Бонус: 5 монет.\n" +
                 "Обери завдання, щоб перейти на наступний рівень";
-        SendMessage message = createMessage(text);
-        message.setChatId(chatId);
 
-        List<String> buttons = getRandomThree(asList(
+        List<String> buttonTexts = getRandomThree(asList(
                 "Сплести маскувальну сітку (+15 монет)",
                 "Зібрати кошти патріотичними піснями (+15 монет)",
                 "Вступити в Міністерство Мемів України (+15 монет)",
@@ -124,60 +119,83 @@ public class Main extends TelegramLongPollingBot {
                 "Вступити до лав тероборони (+15 монет)"
         ));
 
-        attachButtons(message, Map.of(
-                buttons.get(0), LEVEL_1_TASK,
-                buttons.get(1), LEVEL_1_TASK,
-                buttons.get(2), LEVEL_1_TASK
-        ));
-        executeAsync(message);
+        Map<String, String> buttons = Map.of(
+                buttonTexts.get(0), LEVEL_1_TASK,
+                buttonTexts.get(1), LEVEL_1_TASK,
+                buttonTexts.get(2), LEVEL_1_TASK
+        );
+
+        // Отправляем анимацию, текст и кнопки одним запросом
+        sendAnimation("level-1", chatId, text, createMarkup(buttons));
     }
 
     private void handleLevelUp(Long chatId, int newLevel) throws TelegramApiException {
         setLevel(chatId, newLevel);
-        sendImage("level-" + newLevel, chatId);
 
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-
-        List<String> buttons;
-        String callback;
+        String text;
+        Map<String, String> buttons;
 
         switch (newLevel) {
             case 2:
-                message.setText("*Вітаємо на другому рівні! Твій гусак - біогусак.*\nБаланс: 20 монет. \nОбери завдання, щоб перейти на наступний рівень");
-                buttons = asList("Зібрати комарів для нової біологічної зброї (+15 монет)", "Пройти курс молодого бійця (+15 монет)", "Задонатити на ЗСУ (+15 монет)", "Збити дрона банкою огірків (+15 монет)", "Зробити запаси коктейлів Молотова (+15 монет)");
-                callback = LEVEL_2_TASK;
+                text = "*Вітаємо на другому рівні! Твій гусак - біогусак.*\nБаланс: 20 монет. \nОбери завдання, щоб перейти на наступний рівень";
+                buttons = createLevelButtons(asList("Зібрати комарів для нової біологічної зброї (+15 монет)", "Пройти курс молодого бійця (+15 монет)", "Задонатити на ЗСУ (+15 монет)", "Збити дрона банкою огірків (+15 монет)", "Зробити запаси коктейлів Молотова (+15 монет)"), LEVEL_2_TASK);
                 break;
             case 3:
-                message.setText("*Вітаємо на третьому рівні! Твій гусак - бандеростажер.*\nБаланс: 35 монет. \nОбери завдання, щоб перейти на наступний рівень");
-                buttons = asList("Злітати на тестовий рейд по чотирьох позиціях (+15 монет)", "Відвезти гуманітарку на передок (+15 монет)", "Знайти зрадника та здати в СБУ (+15 монет)", "Навести арту на орків (+15 монет)", "Притягнути танк трактором (+15 монет)");
-                callback = LEVEL_3_TASK;
+                text = "*Вітаємо на третьому рівні! Твій гусак - бандеростажер.*\nБаланс: 35 монет. \nОбери завдання, щоб перейти на наступний рівень";
+                buttons = createLevelButtons(asList("Злітати на тестовий рейд по чотирьох позиціях (+15 монет)", "Відвезти гуманітарку на передок (+15 монет)", "Знайти зрадника та здати в СБУ (+15 монет)", "Навести арту на орків (+15 монет)", "Притягнути танк трактором (+15 монет)"), LEVEL_3_TASK);
                 break;
             case 4:
-                message.setText("*Вітаємо на останньому рівні! Твій гусак - готова біологічна зброя - бандерогусак.*\nБаланс: 50 монет. \nТепер ти можеш придбати Джавелін і глушити чмонь");
-                attachButtons(message, Map.of("Купити Джавелін (50 монет)", LEVEL_4_TASK));
-                executeAsync(message);
-                return;
+                text = "*Вітаємо на останньому рівні! Твій гусак - готова біологічна зброя - бандерогусак.*\nБаланс: 50 монет. \nТепер ти можеш придбати Джавелін і глушити чмонь";
+                buttons = Map.of("Купити Джавелін (50 монет)", LEVEL_4_TASK);
+                break;
             default:
                 logger.warn("Attempted to level up to an unknown level: {}", newLevel);
                 return;
         }
 
-        List<String> randomButtons = getRandomThree(buttons);
-        attachButtons(message, Map.of(
-                randomButtons.get(0), callback,
-                randomButtons.get(1), callback,
-                randomButtons.get(2), callback
-        ));
-        executeAsync(message);
+        sendAnimation("level-" + newLevel, chatId, text, createMarkup(buttons));
     }
 
     private void handleFinalTask(Long chatId) throws TelegramApiException {
         setLevel(chatId, 5);
-        sendImage("final", chatId);
-        SendMessage message = createMessage("*Джавелін твій. Повний вперед!*");
-        message.setChatId(chatId);
-        executeAsync(message);
+        String text = "*Джавелін твій. Повний вперед!*";
+        // Отправляем финальную анимацию с подписью, без кнопок
+        sendAnimation("final", chatId, text, null);
+    }
+
+    /**
+     * Создает Map для кнопок уровня, выбирая 3 случайных задания.
+     */
+    private Map<String, String> createLevelButtons(List<String> tasks, String callbackData) {
+        List<String> randomTasks = getRandomThree(tasks);
+        return Map.of(
+                randomTasks.get(0), callbackData,
+                randomTasks.get(1), callbackData,
+                randomTasks.get(2), callbackData
+        );
+    }
+
+    /**
+     * Отправляет анимацию с возможностью добавить подпись и кнопки.
+     * @param name Имя файла анимации (без .gif)
+     * @param chatId ID чата
+     * @param caption Текст подписи под анимацией (поддерживает Markdown)
+     * @param markup Клавиатура с кнопками
+     */
+    public void sendAnimation(String name, Long chatId, String caption, InlineKeyboardMarkup markup) throws TelegramApiException {
+        SendAnimation animation = new SendAnimation();
+        animation.setChatId(chatId);
+        animation.setAnimation(new InputFile(new File("images/" + name + ".gif")));
+
+        if (caption != null) {
+            animation.setCaption(caption);
+            animation.setParseMode("markdown");
+        }
+        if (markup != null) {
+            animation.setReplyMarkup(markup);
+        }
+
+        execute(animation);
     }
 
     public Long getChatId(Update update) {
@@ -190,14 +208,10 @@ public class Main extends TelegramLongPollingBot {
         return null;
     }
 
-    public SendMessage createMessage(String text) {
-        SendMessage message = new SendMessage();
-        message.setText(text);
-        message.setParseMode("markdown");
-        return message;
-    }
-
-    public void attachButtons(SendMessage message, Map<String, String> buttons) {
+    /**
+     * Создает объект клавиатуры (разметки) из карты кнопок.
+     */
+    private InlineKeyboardMarkup createMarkup(Map<String, String> buttons) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
@@ -211,20 +225,7 @@ public class Main extends TelegramLongPollingBot {
             keyboard.add(List.of(button));
         }
         markup.setKeyboard(keyboard);
-        message.setReplyMarkup(markup);
-    }
-
-    public void sendImage(String name, Long chatId) {
-        try {
-            SendAnimation animation = new SendAnimation();
-            InputFile inputFile = new InputFile(new File("images/" + name + ".gif"));
-            animation.setAnimation(inputFile);
-            animation.setChatId(chatId);
-            execute(animation);
-        } catch (TelegramApiException e) {
-            // Используем логгер для записи ошибок
-            logger.error("Failed to send image '{}' to chat {}: {}", name, chatId, e.getMessage(), e);
-        }
+        return markup;
     }
 
     public int getLevel(Long chatId) {
